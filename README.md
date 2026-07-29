@@ -47,6 +47,15 @@ d = auto_heal(d, framework='uiautomator2', script_path='test_login.py')
 d(resourceId="com.example:id/btn_login").click()
 ```
 
+#### 使用回调持久化（数据库/内存）
+
+```python
+def on_healed(record):
+    db.save_heal_record(record['intent'], record['new_locator'])
+
+d = auto_heal(d, framework='uiautomator2', persist_callback=on_healed)
+```
+
 #### hypium
 
 ```python

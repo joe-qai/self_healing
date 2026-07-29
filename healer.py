@@ -694,13 +694,24 @@ class LLMHealingAgent:
 
 
 class ScriptPatcher:
-    """在原 .py 文件中将旧定位符替换为新定位符。"""
+    """将愈合记录持久化到脚本。
 
-    def __init__(self, script_path):
+    支持两种模式：
+    - `script_path`：直接读写本地 .py 文件，原地替换定位符
+    - `persist_callback`：回调函数，收到愈合记录后由调用方自行处理（如写入数据库/内存）
+    """
+
+    def __init__(self, script_path=None, persist_callback=None):
         self.script_path = script_path
+        self.persist_callback = persist_callback
 
     def patch(self, heal_record):
         if not heal_record:
+            return
+        if self.persist_callback:
+            self.persist_callback(heal_record)
+            return
+        if not self.script_path:
             return
         try:
             with open(self.script_path, 'r', encoding='utf-8') as f:
@@ -744,13 +755,13 @@ class HealingProxy:
     v2.0 — 多候选 + LLM 验证 + 回滚 + 因果检测。
     """
 
-    def __init__(self, real_driver, framework='uiautomator2', script_path=None, config=None):
+    def __init__(self, real_driver, framework='uiautomator2', script_path=None, config=None, persist_callback=None):
         self._adapter = build_adapter(real_driver, framework)
         self.framework = framework
         self.script_path = script_path
         self._agent = LLMHealingAgent(config)
         self._session = HealSession()
-        self._patcher = ScriptPatcher(script_path) if script_path else None
+        self._patcher = ScriptPatcher(script_path, persist_callback) if script_path or persist_callback else None
         self._heal_records = []
 
     def __call__(self, **locator):
@@ -1068,13 +1079,13 @@ class HypiumHealingProxy:
     """Wrap hypium UiDriver, intercept touch() to self-heal on failure.
     与 HealingProxy 共享同一套 v2.0 循环逻辑。"""
 
-    def __init__(self, real_driver, script_path=None, config=None):
+    def __init__(self, real_driver, script_path=None, config=None, persist_callback=None):
         self._adapter = HypiumAdapter(real_driver)
         self.framework = 'hypium'
         self.script_path = script_path
         self._agent = LLMHealingAgent(config)
         self._session = HealSession()
-        self._patcher = ScriptPatcher(script_path) if script_path else None
+        self._patcher = ScriptPatcher(script_path, persist_callback) if script_path or persist_callback else None
 
     def touch(self, locator):
         if isinstance(locator, tuple):
@@ -1228,14 +1239,18 @@ class HypiumHealingProxy:
 # ── auto_heal 快捷入口 ──────────────────────────────────────────────
 
 
-def auto_heal(driver, framework='uiautomator2', script_path=None, config=None):
+def auto_heal(driver, framework='uiautomator2', script_path=None, config=None, persist_callback=None):
     """
     一行启用自愈：
       d = auto_heal(d, framework="wda", script_path=__file__)
       d = auto_heal(d, framework="uiautomator2", script_path=__file__)
       d = auto_heal(d, framework="hypium", script_path=__file__)
     driver: u2 Session / wda Client / hypium UiDriver
+
+    script_path: 本地 .py 文件路径（可选），愈合后原地替换定位符
+    persist_callback: 自定义持久化回调（可选），收到 heal_record 后由调用方处理
+                      签名: callback(heal_record: dict) -> None
     """
     if framework in ('hypium', 'harmonyos'):
-        return HypiumHealingProxy(driver, script_path, config)
-    return HealingProxy(driver, framework, script_path, config)
+        return HypiumHealingProxy(driver, script_path, config, persist_callback)
+    return HealingProxy(driver, framework, script_path, config, persist_callback)
