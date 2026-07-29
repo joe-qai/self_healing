@@ -20,12 +20,15 @@ pip install openai
 
 ### 2. 配置 LLM API（可选）
 
-创建 `config.txt`（已加入 `.gitignore`，不会提交）：
+创建 `.env` 文件（已加入 `.gitignore`，不会提交）：
 
+```ini
+API_KEY=sk-your-api-key
+BASE_URL=https://api.openai.com/v1
+MODEL=gpt-4o
 ```
-sk-your-api-key
-https://api.openai.com/v1
-```
+
+也支持通过同名环境变量配置（优先级：`.env` < 环境变量）。
 
 不配置则自动降级为启发式匹配（适用于简单的文字/ID 差异场景）。
 
@@ -85,19 +88,23 @@ d(label="Login").tap()
 
 ## 配置文件
 
-环境变量 `HEALER_CONFIG` 可指定配置文件路径，默认读取 `config.txt`：
+创建 `.env` 文件放在项目根目录（已 `.gitignore`）：
 
-```python
-import os
-os.environ['HEALER_CONFIG'] = '/path/to/config.txt'
+```ini
+API_KEY=sk-xxx
+BASE_URL=https://apihub.agnes-ai.com/v1
+MODEL=agnes-2.0-flash
 ```
+
+环境变量同名覆盖（`API_KEY` / `BASE_URL` / `MODEL`），或通过 `HEALER_CONFIG` 指定自定义路径。
 
 ## 项目结构
 
 ```
-healer.py                  # 核心引擎（单文件，~1200 行）
+healer.py                     # 核心引擎（单文件，~1200 行）
 SELF_HEALING_ARCHITECTURE.md  # 架构设计文档
-config.txt                 # LLM API 配置（已 gitignore）
+.env                          # LLM API 配置（已 gitignore，需自行创建）
+.env.example                  # 配置模板（可提交）
 ```
 
 ## 关键设计

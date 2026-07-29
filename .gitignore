@@ -1,3 +1,4 @@
+.env
 config.txt
 .heal_cache.json
 __pycache__/

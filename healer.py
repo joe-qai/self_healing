@@ -16,7 +16,24 @@ from abc import ABC, abstractmethod
 
 # ── 配置加载 ────────────────────────────────────────────────────────
 
-DEFAULT_CONFIG_PATH = os.path.join(os.path.dirname(__file__), "config.txt")
+DEFAULT_CONFIG_PATH = os.path.join(os.path.dirname(__file__), ".env")
+
+
+def load_env_file(path):
+    """Parse a .env file and return a dict of key=value pairs."""
+    conf = {}
+    if not os.path.exists(path):
+        return conf
+    with open(path, 'r', encoding='utf-8') as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith('#'):
+                continue
+            if '=' not in line:
+                continue
+            key, _, val = line.partition('=')
+            conf[key.strip()] = val.strip().strip('"').strip("'")
+    return conf
 
 
 def load_config(config_path=None):
@@ -26,16 +43,10 @@ def load_config(config_path=None):
         'model': 'agnes-2.0-flash',
     }
     path = config_path or os.environ.get('HEALER_CONFIG', DEFAULT_CONFIG_PATH)
-    if os.path.exists(path):
-        with open(path, 'r') as f:
-            lines = [l.strip() for l in f if l.strip() and not l.startswith('#')]
-        if lines:
-            conf['api_key'] = lines[0]
-        if len(lines) > 1:
-            conf['base_url'] = lines[1]
-        if len(lines) > 2:
-            conf['model'] = lines[2]
-    conf['api_key'] = conf['api_key'] or os.environ.get('OPENAI_API_KEY', '')
+    env = load_env_file(path)
+    conf['api_key'] = env.get('API_KEY', '') or os.environ.get('API_KEY', '') or os.environ.get('OPENAI_API_KEY', '')
+    conf['base_url'] = env.get('BASE_URL', '') or os.environ.get('BASE_URL', conf['base_url'])
+    conf['model'] = env.get('MODEL', '') or os.environ.get('MODEL', conf['model'])
     return conf
 
 
@@ -691,8 +702,12 @@ class ScriptPatcher:
     def patch(self, heal_record):
         if not heal_record:
             return
-        with open(self.script_path, 'r', encoding='utf-8') as f:
-            content = f.read()
+        try:
+            with open(self.script_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+        except FileNotFoundError:
+            print(f"  ! Script not found: {self.script_path}")
+            return
 
         old_loc = heal_record.get('old_locator', {})
         new_loc = heal_record.get('new_locator', {})
