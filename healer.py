@@ -330,10 +330,7 @@ class HypiumAdapter(PlatformAdapter):
         return {}
 
     def screenshot(self):
-        try:
-            return self.d.screenshot()
-        except Exception:
-            return None
+        return None
 
 
 def build_adapter(driver, framework):
