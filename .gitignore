@@ -1,0 +1,12 @@
+config.txt
+.heal_cache.json
+__pycache__/
+*.pyc
+.pytest_cache/
+reports/
+test_*.py
+testAndroid.py
+testHarmonyOS.py
+testIOS.py
+logs.txt
+tmp_hypium/
